@@ -162,10 +162,10 @@ def main():
             add_user(cur, 'Сергей', 'Петров', 'summary@mail.ru')
             add_user(cur, 'Мария', 'Иванова', 'fest@yandex.ru')
             add_user(cur, 'Валерий', 'Сергеев', 'stant@gmail.com')
-            client_id = get_client_id(cur, name='Андрей', surname='Иванов') # получаем client_id на основание имени и фамилии
+            client_id = get_client_id(cur, name='Андрей', surname='Иванов') # получаем client_id на основании имени и фамилии
             if_client_exists(cur, client_id)           # проверяем, что клиент существует
             add_phone(cur, client_id, '+79111234567')  # добавляем к текущему клиенту номер телефона
-            add_phone(cur, 2, '+79211112222')          # добавляем номер по телефона id
+            add_phone(cur, 2, '+79211112222')          # добавляем номер телефона по id
             add_phone(cur, 3, '+79998889999')
             update_info(cur, client_id, email = 'sаlute_backup@mail.ru', phone = '79111237654') # обновляем текущему клиенту email и номер телефона
             del_phone(cur, client_id, '79111237654')   # удаляем номер телефона текущего клиента
