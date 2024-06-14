@@ -69,14 +69,26 @@ def if_client_exists(cur, client_id):
 # функция, позволяющая изменить данные о клиенте
 def update_info(cur, client_id, name=None, surname=None, email=None, phone=None):
     try:
-        cur.execute("""
-            UPDATE clients SET name=%s, surname=%s, email=%s
-            WHERE client_id=%s;
-            """, (name, surname, email, client_id))
-        cur.execute("""
-            UPDATE phones SET phone=%s
-            WHERE client_id=%s;
-            """, (phone, client_id))
+        if name:
+            cur.execute("""
+                UPDATE clients SET name=%s
+                WHERE client_id=%s;
+                """, (name, client_id))
+        if surname:
+            cur.execute("""
+                UPDATE clients SET surname=%s
+                WHERE client_id=%s;
+                """, (surname, client_id))
+        if email:
+            cur.execute("""
+                UPDATE clients SET email=%s
+                WHERE client_id=%s;
+                """, (email, client_id))
+        if phone:
+            cur.execute("""
+                UPDATE phones SET phone=%s
+                WHERE client_id=%s;
+                """, (phone, client_id))
     except Exception as e:
         print(e)
 
@@ -93,7 +105,10 @@ def del_phone(cur, client_id, phone):
 # функция, позволяющая удалить существующего клиента
 def del_user(cur, client_id):
     try:
-        del_phone(cur, client_id)
+        cur.execute("""
+        DELETE FROM phones 
+        WHERE client_id=%s;
+            """, (client_id,))
         cur.execute("""
         DELETE FROM clients 
         WHERE client_id=%s;
@@ -102,57 +117,62 @@ def del_user(cur, client_id):
         print(e)
         
 # функция, позволяющая найти клиента по его данным: имени, фамилии, email или телефону
-def find_client(cur, name=None, surname=None, email=None, phone=None):
-    if name is not None:
+def find_client(cur, name='%', surname='%', email='%', phone=None):
+    if not phone:
         cur.execute("""
-            SELECT * 
+            SELECT name, surname, email
             FROM clients 
-            WHERE name=%s;
-            """, (name,))
-    elif surname is not None:
+            WHERE name LIKE %s
+            AND surname LIKE %s 
+            AND email LIKE %s;
+            """, (name, surname, email))
+    else:
         cur.execute("""
-            SELECT * 
-            FROM clients 
-            WHERE surname=%s;
-            """, (surname,))
-    elif email is not None:
-        cur.execute("""
-            SELECT * 
-            FROM clients 
-            WHERE email=%s;
-            """, (email,))
-    elif phone is not None:
-        cur.execute("""
-            SELECT * 
+            SELECT name, surname, email, phone
             FROM phones 
-            WHERE phone=%s;
-            """, (phone,))
-    result = cur.fetchone()
-    if result is None:
-         print('Пользователь не найден')
+                RIGHT JOIN clients
+                ON phones.client_id = clients.client_id
+                WHERE name LIKE %s
+                AND surname LIKE %s 
+                AND email LIKE %s
+                AND phone LIKE %s;
+            """, (name, surname, email, phone))
+    result = cur.fetchall()
+    if len(result) == 0:
+        print('Пользователь не найден')
     else:
         print(result)
         return result
 
+def del_table(cur):
+    cur.execute("""
+        DROP TABLE IF EXISTS phones;
+        """)
+    cur.execute("""
+        DROP TABLE IF EXISTS clients;
+        """)          
+
 
 def main():
-    conn = psycopg2.connect(database='netology_db', user='postgres', password='12341')   
-    with conn.cursor() as cur:
-        create_table(cur)   # создаем структуру БД
-        add_user(cur, 'Андрей', 'Иванов', 'sа@mail.ru') # добавляем 3х клиентов
-        add_user(cur, 'Сергей', 'Петров', 'su@mail.ru')
-        add_user(cur, 'Мария', 'Иванова', 'fe@yandex.ru')
-        client_id = get_client_id(cur, name='Андрей', surname='Иванов') # получаем client_id на основание имени и фамилии
-        if_client_exists(cur, client_id)           # проверяем, что клиент существует
-        add_phone(cur, client_id, '+79119999999')  # добавляем к текущему клиенту номер телефона
-        add_phone(cur, 3, '+79118888888')          # добавляем номер по id
-        update_info(cur, client_id, 'Андрей', 'Иванов', 'changed@mail.ru', '+79117777777') # обновляем текущему клиенту email и номер телефона
-        del_phone(cur, client_id, '+79117777777')  # удаляем номер телефона текущего клиента
-        del_user(cur, client_id)                   # и его самого
-        find_client(cur, email='su@mail.ru')       # ищем клиента по email
-        conn.commit()
-        
-    cur.close()
+    with psycopg2.connect(database='netology_db', user='postgres', password='12341') as conn:
+        with conn.cursor() as cur:
+            # del_table(cur) # для отладки
+            create_table(cur)   # создаем структуру БД
+            add_user(cur, 'Андрей', 'Иванов', 'sаlute@mail.ru') # добавляем клиентов
+            add_user(cur, 'Сергей', 'Петров', 'summary@mail.ru')
+            add_user(cur, 'Мария', 'Иванова', 'fest@yandex.ru')
+            add_user(cur, 'Валерий', 'Сергеев', 'stant@gmail.com')
+            client_id = get_client_id(cur, name='Андрей', surname='Иванов') # получаем client_id на основание имени и фамилии
+            if_client_exists(cur, client_id)           # проверяем, что клиент существует
+            add_phone(cur, client_id, '+79111234567')  # добавляем к текущему клиенту номер телефона
+            add_phone(cur, 2, '+79211112222')          # добавляем номер по телефона id
+            add_phone(cur, 3, '+79998889999')
+            update_info(cur, client_id, email = 'sаlute_backup@mail.ru', phone = '79111237654') # обновляем текущему клиенту email и номер телефона
+            del_phone(cur, client_id, '79111237654')   # удаляем номер телефона текущего клиента
+            del_user(cur, client_id)                   # удаляем все телефоны клиента и его самого из БД
+            find_client(cur, name='Сергей', phone='+79211112222')       # ищем клиента 
+        cur.close()
+    conn.close()
 
 if __name__ == '__main__':
       main() 
